@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <title></title>
+    <link rel="stylesheet" href="">
+</head>
+<style>
+@media all and (max-width: 1000px){
+    #theCanvas{
+        position: absolute;
+        left:0;
+        top:0;
+        background: #000;
+    }
+    #usertext{
+        position: absolute;
+        display: inline-block;
+        left:0;
+        width:50%;
+        height:60px;
+        line-height: 60px;
+        text-align: center;
+        box-sizing:border-box;
+        -o-box-sizing:border-box;
+        -ms-box-sizing:border-box;
+        -moz-box-sizing:border-box;
+        -webkit-box-sizing:border-box;
+    }
+    #userbutton{
+        position: absolute;
+        display: inline-block;
+        left:50%;
+        width:50%;
+        height:60px;
+        line-height: 60px;
+        text-align: center;
+        background: #aaa;
+        color:#fff;
+        
+    }
+    #userbutton:hover{
+        background: #bbb;
+        cursor: pointer;
+    }
+}
+
+@media all and (min-width: 1000px){
+    #theCanvas{
+        position: absolute;
+        top:0;
+        background: #000;
+    }
+    #usertext{
+        position: absolute;
+        display: inline-block;
+        width:500px;
+        height:40px;
+        line-height: 40px;
+        text-align: center;
+        box-sizing:border-box;
+        -o-box-sizing:border-box;
+        -ms-box-sizing:border-box;
+        -moz-box-sizing:border-box;
+        -webkit-box-sizing:border-box;
+    }
+    #userbutton{
+        position: absolute;
+        display: inline-block;
+        width:500px;
+        height:40px;
+        line-height: 40px;
+        text-align: center;
+        background: #aaa;
+        color:#fff;
+        
+    }
+    #userbutton:hover{
+        background: #bbb;
+        cursor: pointer;
+    }
+}
+</style>
+<body>
+    <script>
+    if(/Android (\d+\.\d+)/.test(navigator.userAgent)){
+        var version = parseFloat(RegExp.$1);
+        if(version > 2.3){
+           var phoneScale = parseInt(window.screen.width)/720;
+           document.write('<meta name="viewport" content="width=720, minimum-scale = '+ phoneScale +', maximum-scale = '+ phoneScale +', user-scalable=no, target-densitydpi=device-dpi">');
+        }else{
+             document.write('<meta name="viewport" content="width=720, target-densitydpi=device-dpi">');
+        }
+    }else{
+        document.write('<meta name="viewport" content="width=720, user-scalable=no, target-densitydpi=device-dpi">');
+    }
+</script>
+    
+    
+    <script>
+    (function(){
+        var totalwidth = window.innerWidth > 1000 ? 1000 : window.innerWidth;
+        var totalheight = window.innerHeight/2;
+
+        // 加画布
+        var canvas = "<canvas id='theCanvas' width='" + totalwidth +"px' height='" + totalheight + "px' ></canvas>";
+
+        // 加按钮等
+        var buttondiv = "<div><input type='text' id='usertext'><div id='userbutton'>ADD MY BULLET</div></div>";
+
+        document.body.insertAdjacentHTML("afterBegin", canvas);
+        document.body.insertAdjacentHTML("beforeEnd", buttondiv);
+
+        var thecanvas = document.querySelector("#theCanvas");
+        var context = theCanvas.getContext("2d");
+
+
+
+        if (totalwidth === 1000){
+            // 证明是大屏
+            thecanvas.style.left = (window.innerWidth - totalwidth)/2 + "px";
+        }else{
+            thecanvas.height = window.innerHeight / 3;
+            totalheight = window.innerHeight / 3;
+        }
+
+        // 调整按钮
+        var usertext = document.querySelector("#usertext");
+        var userbutton = document.querySelector("#userbutton");
+        usertext.style.top = (thecanvas.height + 10) + "px";
+        userbutton.style.top = (thecanvas.height + 10) + "px";
+
+        if (totalwidth === 1000){
+            // 大屏
+            usertext.style.left = (window.innerWidth - totalwidth)/2 + "px";
+            userbutton.style.left = ((window.innerWidth - totalwidth)/2 + 500) + "px";
+        }
+
+
+
+        var text = [
+            "Look Look",
+            "You can see the bullet screen",
+            "WooooooooooooooooW",
+            "66666666",
+            "哇，居然有中文",
+            "한글",
+            "日本語の",
+            "wowo,跟着我左手右手一个慢动作",
+            "NYU",
+            "66666666",
+            "Ineffable",
+            "Ru guo ni neng du wan zhe duan ping yin, zheng ming ni shi you duo wu liao...",
+            "五五开大战faker，详情请自行联想",
+            "什么鬼",
+            "张全蛋哈哈哈",
+            "66666666"
+        ];
+
+        var colors = [
+            "red",
+            "blue",
+            "orange",
+            "#8234aa",
+            "#fff",
+            "#fff",
+            "#fff"
+        ];
+
+        // 弹幕对象
+        function Bullet(x, y, fontsize, color, speed, text){
+            this.x = x;
+            this.y = y;
+            this.fontsize = fontsize;
+            this.color = color;
+            this.speed = speed;
+            this.text = text;
+        }
+
+        // 弹幕框对象
+        function Box(x, y, width, height, speed){
+            this.x = x;
+            this.y = y;
+            this.width = width;
+            this.height = height;
+            this.speed = speed;
+        }
+
+        // 储存所有弹幕对象
+        var allbullet = [],
+            index = 0,   // 加入到第几条
+            addinterval = 0;   // 过几秒添加
+        var userbox = [];   // 用户输入弹幕的框
+
+
+        // 添加事件
+        window.addEventListener("load", canvasApp, false);
+        userbutton.addEventListener("click", addUserBullet, false);
+
+        // 兼容浏览器，尤其是IE9
+        window.requestAnimationFrame = (function(){  
+            return  window.requestAnimationFrame       ||  
+                    window.webkitRequestAnimationFrame ||  
+                    window.mozRequestAnimationFrame    ||  
+                    function(callback){  
+                      window.setTimeout(callback, 1000 / 60);  
+                    };  
+        })();
+
+        function canvasApp(){
+
+            function drawScreen(){
+                context.clearRect(0, 0, totalwidth < 1000 ? totalwidth : 1000, totalheight);
+                // 加弹幕
+                addBullet();
+                // 渲染弹幕
+                drawBullet();
+                // 渲染弹幕框
+                drawBox();
+                // 删除弹幕
+                deleteBullet();
+                // 继续动画
+                requestAnimationFrame(drawScreen);
+            }
+
+            // 开始动画
+            requestAnimationFrame(drawScreen);
+        }
+
+        function addBullet(){
+
+
+            if (addinterval > 20){
+                // add x, y, fontsize, color, speed, text
+                var tempx = Math.min(totalwidth, 1000),
+                    tempsize = Math.random()*10 + 16,
+                    tempy = Math.random()*totalheight + tempsize,
+                    tempcolor = colors[Math.floor(Math.random()*colors.length)],
+                    tempspeed = Math.random()*5 + 1,
+                    temptext = text[index];
+                index++;
+                if (index >= text.length){
+                    index = 0;
+                }
+                tempy = tempy + tempsize >= totalheight ? totalheight - tempsize : tempy;
+                allbullet.push(new Bullet(tempx, tempy, tempsize, tempcolor, tempspeed, temptext));
+                addinterval = 0;
+            }else{
+                addinterval++;
+            }
+
+        }
+
+        function drawBullet(){
+
+            for (var i = 0; i < allbullet.length; i++){
+                var temp = allbullet[i];
+
+                context.fillStyle = temp.color;
+                context.font = temp.fontsize + "px YH";
+                var text = temp.text;
+                temp.width = context.measureText(text).width;   // 给弹幕对象加上width属性
+                context.fillText(text, temp.x, temp.y);
+                temp.x -= temp.speed;
+            }
+        }
+
+        function drawBox(){
+            for (var i = 0; i < userbox.length; i++){
+                var box = userbox[i];
+                context.strokeStyle = "#fff";
+                context.strokeRect(box.x, box.y, box.width, box.height);
+                context.stroke();
+                box.x -= box.speed;
+            }
+        }
+
+        function deleteBullet(){
+
+            for (var i = 0; i < allbullet.length; i++){
+                var temp = allbullet[i];
+
+                if (temp.x + temp.width <= 0){
+                    allbullet.splice(i, 1);
+                    i--;
+                }
+            }
+
+            for (i = 0; i < userbox.length; i++){
+                var box = userbox[i];
+
+                if (box.x + box.width <= 0){
+                    userbox.splice(i, 1);
+                    i--;
+                }
+            }
+        }
+
+
+        function addUserBullet(){
+            var txt = usertext.value.replace(/(^\s*)|(\s*$)/g, "");
+            if (txt !== ""){
+                usertext.value = "";
+                var tempx = Math.min(totalwidth, 1000),
+                    tempsize = Math.random()*10 + 16,
+                    tempy = Math.random()*totalheight + tempsize,
+                    tempcolor = "#fff",
+                    tempspeed = Math.random()*5 + 1,
+                    temptext = txt;
+
+                tempy = tempy + tempsize >= totalheight ? totalheight - tempsize : tempy;
+
+                allbullet.push(new Bullet(tempx, tempy, tempsize, tempcolor, tempspeed, temptext));
+                
+                context.font = tempsize + "px YH";
+                userbox.push(new Box(tempx-1, tempy-tempsize-1, context.measureText(temptext).width+2, tempsize+6, tempspeed));
+            }
+        }
+
+    })();
+    </script>
+    
+</body>
+</html>
